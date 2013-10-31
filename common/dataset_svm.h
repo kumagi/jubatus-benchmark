@@ -7,6 +7,7 @@
 #include <tr1/memory>
 #include <pficommon/lang/cast.h>
 
+#include <jubatus/client/classifier_types.hpp>
 #include "dataset.h"
 #include "exception.h"
 
@@ -17,7 +18,7 @@ template<typename DATUM>
 class DatasetSVM : public Dataset {
 public:
   typedef DATUM datum_type;
-  typedef std::pair<std::string, datum_type> label_datum_type;
+  typedef jubatus::classifier::labeled_datum label_datum_type;
   typedef std::tr1::shared_ptr<label_datum_type> label_datum_ptr;
 
 public:
@@ -36,25 +37,27 @@ public:
 
   virtual void load(const std::string& path, size_t limit = (size_t)-1) {
     std::ifstream in_file( path.c_str(), std::ios::in );
-    if ( !in_file )
+    if ( !in_file ) {
       throw app_error( std::string(path) + ": coudln't open file", 2);
-
+    }
     std::string line;
     size_t line_no = 0;
-    while( limit == (size_t)-1 || line_no < limit ) {
-      if ( !std::getline(in_file, line) ) break;
-
+    while(limit == (size_t)-1 || line_no < limit) {
+      if (!std::getline(in_file, line)) {
+        break;
+      }
       ++line_no;
       label_datum_ptr d = parse_line(line, path, line_no);
-      if ( d ) data_.push_back(d);
+      if (d) {
+        data_.push_back(d);
+      }
     }
   }
 
 private:
-  label_datum_ptr parse_line(const std::string& line, 
+  label_datum_ptr parse_line(const std::string& line,
                              const std::string& src_path, size_t line_no) {
     // following lines are derived from jubatus/core/fv_converter/lisvm_convert.cpp
-    
     std::stringstream in(line);
 
     std::string label;
@@ -80,9 +83,9 @@ private:
     }
 
     label_datum_ptr result( new label_datum_type() );
-    result->first.swap(label);
-    result->second.string_values.clear();
-    result->second.num_values.swap(num_values);
+    result->label.swap(label);
+    result->data.string_values.clear();
+    result->data.num_values.swap(num_values);
 
     return result;
   }

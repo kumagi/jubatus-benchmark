@@ -1,8 +1,6 @@
-
 #include <iostream>
-
-#include <jubatus/client.hpp>
-
+#include <jubatus/client/classifier_client.hpp>
+#include <jubatus/core/fv_converter/datum.hpp>
 #include "dataset_svm.h"
 #include "exception.h"
 #include "main.h"
@@ -28,16 +26,16 @@ private:
   ClassifierBench* bench_;
 };
 
-class ClassifierBench: public Main {
+class ClassifierBench : public Main {
 public:
-  typedef jubatus::classifier::datum datum_type;
+  typedef jubatus::client::common::datum datum_type;
   typedef std::vector<std::pair<std::string, double> > num_values_type;
 
 public:
   virtual const char* program_name() {
     return "jubatus-bench-classifier";
   }
-  
+
   virtual const char* short_name() {
     return "jubatus-bench-classifier";
   }
@@ -55,9 +53,13 @@ public:
   }
 
   virtual void create_datasets() {
-    if ( verbose ) std::clog << "# dataset: loading: " << dataset_path << std::endl;
+    if (verbose) {
+      std::clog << "# dataset: loading: " << dataset_path << std::endl;
+    }
     dataset_.load( dataset_path, dataset_limit );
-    if ( verbose ) std::clog << "# dataset: loaded: " << dataset_.size() << " items" << std::endl;
+    if (verbose) {
+      std::clog << "# dataset: loaded: " << dataset_.size() << " items" << std::endl;
+    }
 
 #if 0
     for(size_t i = 0; i < dataset_.size(); ++i ) {
@@ -89,7 +91,7 @@ private:
 };
 
 void ClassifierQueryRunner::execute() {
-  if ( bench_->query_mode == "train" || bench_->query_mode == "update" || 
+  if ( bench_->query_mode == "train" || bench_->query_mode == "update" ||
        bench_->query_mode == "")
     execute_train();
   else if ( bench_->query_mode == "classify" || bench_->query_mode == "analyze" )
@@ -99,17 +101,16 @@ void ClassifierQueryRunner::execute() {
 }
 
 void ClassifierQueryRunner::execute_train() {
-  typedef ClassifierBench::datum_type datum_type;
-  typedef DatasetSVM<ClassifierBench::datum_type> dataset_type;
-
-  jubatus::classifier::client::classifier client( bench_->host, bench_->port, bench_->timeout_sec );
+  jubatus::classifier::client::classifier client(bench_->host,
+                                                 bench_->port,
+                                                 bench_->cluster_name,
+                                                 bench_->timeout_sec);
 
   size_t idx = 0;
   for(size_t i = 0; i < query_num; ++i) {
-    std::vector<dataset_type::label_datum_type> train_data;
+    std::vector<jubatus::classifier::labeled_datum> train_data;
     for(size_t j = 0; j < bench_->bulk_size; ++j ) {
-      const dataset_type::label_datum_type &ld = bench_->dataset_.get(idx);
-      train_data.push_back(ld);
+      train_data.push_back(bench_->dataset_.get(idx));
       ++idx;
     }
 
@@ -117,11 +118,10 @@ void ClassifierQueryRunner::execute_train() {
     TimeSpan t;
     t.start();
     BEGIN_SAFE_RPC_CALL() {
-      client.train( bench_->cluster_name, train_data);
+      client.train(train_data);
     }
     END_SAFE_RPC_CALL( client, bench_->verbose, err_code );
     t.stop();
-    
     results[i].data_index = i;
     results[i].err_code = err_code;
     results[i].query_time = t;
@@ -129,17 +129,17 @@ void ClassifierQueryRunner::execute_train() {
 }
 
 void ClassifierQueryRunner::execute_classify() {
-  typedef ClassifierBench::datum_type datum_type;
   typedef DatasetSVM<ClassifierBench::datum_type> dataset_type;
-
-  jubatus::classifier::client::classifier client( bench_->host, bench_->port, bench_->timeout_sec );
-
+  jubatus::classifier::client::classifier client(bench_->host,
+                                                 bench_->port,
+                                                 bench_->cluster_name,
+                                                 bench_->timeout_sec);
   size_t idx = 0;
   for(size_t i = 0; i < query_num; ++i) {
     std::vector<dataset_type::datum_type> classify_data;
     for(size_t j = 0; j < bench_->bulk_size; ++j ) {
       const dataset_type::label_datum_type &ld = bench_->dataset_.get(idx);
-      classify_data.push_back(ld.second);
+      classify_data.push_back(ld.data);
       ++idx;
     }
 
@@ -147,11 +147,11 @@ void ClassifierQueryRunner::execute_classify() {
     TimeSpan t;
     t.start();
     BEGIN_SAFE_RPC_CALL() {
-      client.classify( bench_->cluster_name, classify_data);
+      client.classify(classify_data);
     }
     END_SAFE_RPC_CALL(client, bench_->verbose, err_code);
     t.stop();
-    
+
     results[i].data_index = i;
     results[i].err_code = err_code;
     results[i].query_time = t;

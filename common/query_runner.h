@@ -18,7 +18,7 @@ class QueryRunner {
 public:
   QueryRunner(size_t id, size_t query_num);
   virtual ~QueryRunner();
-    
+
   virtual void start();
   virtual void execute();
   virtual void join();
@@ -26,7 +26,7 @@ public:
   virtual const std::vector<QueryResult>& get_results();
   virtual size_t get_success_num();
   virtual pfi::text::json::json get_result_as_json();
-  
+
   virtual void execute_wrapper();
 
 public:
@@ -55,7 +55,6 @@ protected:
     (client).get_client().close();                                      \
     errcode = QueryResult::ERR_EXCEPTION;                               \
   }
-  
 
 } // namespace bench
 } // namespace jubatus

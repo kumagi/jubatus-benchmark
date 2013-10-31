@@ -44,18 +44,18 @@ public:
 
   virtual size_t dataset_size() const = 0;
   virtual std::string dataset_description() const = 0;
-  
+
   virtual pfi::text::json::json get_summary_as_json();
   virtual pfi::text::json::json get_summary_statistics_as_json(pfi::text::json::json result);
   virtual pfi::text::json::json get_result_as_json();
 
   virtual void show_usage(std::ostream& out);
-  virtual void show_specific_options_usage(std::ostream& out); 
+  virtual void show_specific_options_usage(std::ostream& out);
   virtual std::string usage_query_mode();
   virtual void add_specific_options();
   virtual bool parse_specific_option(int opt, const char *optarg);
   virtual void validate_specific_options();
-  
+
 public:
   /// common options
 
